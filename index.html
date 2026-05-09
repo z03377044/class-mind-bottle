@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>音为画解 · 心灵漂流</title>
-    <!-- 引入 Bmob SDK -->
     <script src="https://cdn.jsdelivr.net/npm/bmob-js-sdk@2.2.5/dist/Bmob-2.2.5.min.js"></script>
     <style>
         :root {
-            --navy-blue: #003366; /* 选定的海军蓝 */
+            --navy-blue: #003366; 
             --paper-white: #ffffff;
             --soft-bg: #f8fafc;
             --border-color: #e2e8f0;
@@ -20,10 +19,9 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             background-color: var(--soft-bg);
             color: var(--text-dark);
-            overflow: hidden;
+            overflow: hidden; /* 防止整个页面在手机端被拖拽 */
         }
 
-        /* 极简学术风格容器 */
         .app-container {
             display: flex; flex-direction: column;
             height: 100vh; max-width: 450px; margin: 0 auto;
@@ -32,39 +30,55 @@
             position: relative;
         }
 
-        .view { display: none; flex-direction: column; padding: 24px; flex: 1; overflow-y: auto; }
-        .view.active { display: flex; animation: slideUp 0.4s ease; }
+        .view { display: none; flex-direction: column; padding: 20px; flex: 1; overflow-y: auto; }
+        .view.active { display: flex; animation: slideUp 0.3s ease; }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 22px; color: var(--navy-blue); margin-bottom: 8px; letter-spacing: 1px; }
-        .header p { font-size: 13px; color: #64748b; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { font-size: 22px; color: var(--navy-blue); margin-bottom: 5px; letter-spacing: 1px; }
+        .header p { font-size: 13px; color: #64748b; margin: 0;}
 
-        /* 按钮设计 */
         .btn {
             background: var(--navy-blue); color: white;
-            border: none; padding: 15px; border-radius: 8px;
+            border: none; padding: 14px; border-radius: 8px;
             font-size: 15px; cursor: pointer; margin: 8px 0;
-            transition: all 0.2s; font-weight: 500;
-            text-align: center;
+            transition: all 0.2s; font-weight: 500; text-align: center;
         }
         .btn:active { transform: scale(0.98); opacity: 0.9; }
         .btn-outline { background: transparent; border: 1.5px solid var(--navy-blue); color: var(--navy-blue); }
 
-        /* 画布区域 */
+        /* 画布与工具栏样式 */
         .canvas-box {
-            border: 1.5px solid var(--border-color);
-            border-radius: 12px; overflow: hidden;
-            background: white; touch-action: none;
-            margin-bottom: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            border: 1.5px solid var(--border-color); border-radius: 8px; 
+            background: white; margin-bottom: 15px; 
+            touch-action: none; /* 关键：彻底阻止画布区域的默认屏幕滑动 */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            position: relative; font-size: 0;
         }
-        canvas { width: 100%; height: 340px; display: block; cursor: crosshair; }
+        canvas { width: 100%; height: 320px; display: block; cursor: crosshair; touch-action: none; }
 
-        /* 工具栏 */
-        .tools { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .color-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #ddd; cursor: pointer; }
-        .color-dot.active { box-shadow: 0 0 0 2px var(--navy-blue); }
+        .tool-panel {
+            background: #f1f5f9; padding: 10px 15px; border-radius: 8px; 
+            margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px;
+        }
+        .tool-row { display: flex; justify-content: space-between; align-items: center; }
+        
+        .colors { display: flex; gap: 10px; flex-wrap: wrap; }
+        .color-dot { 
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s; 
+        }
+        .color-dot.active { transform: scale(1.2); border-color: var(--navy-blue); }
+
+        .sizes { display: flex; gap: 8px; align-items: center; }
+        .size-btn { 
+            padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 4px; 
+            font-size: 12px; background: white; cursor: pointer; color: #64748b;
+        }
+        .size-btn.active { background: var(--navy-blue); color: white; border-color: var(--navy-blue); }
+
+        .action-btn { background: none; border: none; color: #475569; font-size: 13px; cursor: pointer; padding: 5px; }
 
         input {
             border: 1.5px solid var(--border-color); padding: 12px; border-radius: 8px;
@@ -75,62 +89,101 @@
 
         #loading-mask {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.8); z-index: 999;
-            display: none; justify-content: center; align-items: center;
-            font-size: 14px; color: var(--navy-blue);
+            background: rgba(255,255,255,0.85); z-index: 999;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            font-size: 15px; color: var(--navy-blue); font-weight: bold;
         }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--navy-blue); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div id="loading-mask">✨ 正在处理星海信息...</div>
+<div id="loading-mask"><div class="spinner"></div><span id="loading-text">正在连接星海...</span></div>
 
 <div class="app-container">
     <!-- 首页 -->
     <div id="view-home" class="view active">
-        <div class="header" style="margin-top: 40px;">
+        <div class="header" style="margin-top: 50px;">
             <h1>音为画解 · 心灵漂流</h1>
-            <p>成都 · 西南财经大学 (SWUFE)</p>
+            <p>西南财经大学 (SWUFE) · 班级心理互动</p>
         </div>
         <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
             <button class="btn" onclick="showView('view-draw')">投掷：画下我的困扰或心情</button>
             <button class="btn btn-outline" onclick="loadBottle()">打捞：遇见另一个灵魂</button>
-            <div style="height: 1px; background: #eee; margin: 20px 0;"></div>
+            <div style="height: 1px; background: #e2e8f0; margin: 20px 0;"></div>
             <button class="btn btn-outline" style="border-color:#cbd5e1; color:#94a3b8;" onclick="showView('view-check')">回响：查看我的信件</button>
         </div>
-        <div style="text-align: center; padding-bottom: 20px; font-size: 12px; color: #94a3b8;">
-            匿名保护中 · 绘画即治愈
-        </div>
+        <div style="text-align: center; padding-bottom: 20px; font-size: 12px; color: #94a3b8;">匿名保护中 · 绘画即治愈</div>
     </div>
 
     <!-- 绘画/投掷页 -->
     <div id="view-draw" class="view">
-        <div class="header"><h3>表达当下</h3><p>用线条画出你的情绪、烦恼或压力</p></div>
+        <div class="header"><h3>表达当下</h3><p>用色彩与线条画出你的情绪</p></div>
+        
         <div class="canvas-box"><canvas id="drawCanvas"></canvas></div>
-        <div class="tools">
-            <div class="color-dot active" style="background:#003366" onclick="setPen('#003366', this)"></div>
-            <div class="color-dot" style="background:#ef4444" onclick="setPen('#ef4444', this)"></div>
-            <div class="color-dot" style="background:#3b82f6" onclick="setPen('#3b82f6', this)"></div>
-            <div style="flex: 1"></div>
-            <button onclick="clearCanvas('drawCanvas')" style="background:none; border:none; color:#64748b; font-size:13px; cursor:pointer;">清空画布</button>
+        
+        <!-- 全新工具栏 -->
+        <div class="tool-panel">
+            <div class="tool-row">
+                <div class="colors" id="palette-draw">
+                    <div class="color-dot active" style="background:#003366" onclick="setTool('drawCanvas', 'color', '#003366', this)"></div>
+                    <div class="color-dot" style="background:#0f172a" onclick="setTool('drawCanvas', 'color', '#0f172a', this)"></div>
+                    <div class="color-dot" style="background:#ef4444" onclick="setTool('drawCanvas', 'color', '#ef4444', this)"></div>
+                    <div class="color-dot" style="background:#f59e0b" onclick="setTool('drawCanvas', 'color', '#f59e0b', this)"></div>
+                    <div class="color-dot" style="background:#10b981" onclick="setTool('drawCanvas', 'color', '#10b981', this)"></div>
+                    <div class="color-dot" style="background:#3b82f6" onclick="setTool('drawCanvas', 'color', '#3b82f6', this)"></div>
+                    <div class="color-dot" style="background:#ffffff; border-color:#cbd5e1;" onclick="setTool('drawCanvas', 'color', '#ffffff', this)" title="白色/橡皮擦"></div>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="sizes" id="size-draw">
+                    <span class="size-btn" onclick="setTool('drawCanvas', 'width', 2, this)">细</span>
+                    <span class="size-btn active" onclick="setTool('drawCanvas', 'width', 5, this)">中</span>
+                    <span class="size-btn" onclick="setTool('drawCanvas', 'width', 12, this)">粗</span>
+                </div>
+                <div>
+                    <button class="action-btn" onclick="undo('drawCanvas')">↩ 撤销</button>
+                    <button class="action-btn" style="color:#ef4444;" onclick="clearCanvas('drawCanvas')">🗑 清空</button>
+                </div>
+            </div>
         </div>
-        <input type="text" id="sName" placeholder="匿名代号（如：锦江路人甲）">
-        <input type="password" id="sPwd" placeholder="设置4-6位查询密码">
-        <button class="btn" onclick="sendBottle()">投向大海</button>
+
+        <input type="text" id="sName" placeholder="你的匿名代号（如：锦江路人甲）">
+        <input type="password" id="sPwd" placeholder="设置提取密码（找回回信需使用）">
+        <button class="btn" onclick="sendBottle()">封装心情并投掷</button>
         <button class="btn btn-outline" onclick="showView('view-home')">返回</button>
     </div>
 
     <!-- 打捞/回复页 -->
     <div id="view-reply" class="view">
-        <div class="header"><h3>共鸣与回应</h3><p>在对方画上添笔，并送上一首歌</p></div>
+        <div class="header"><h3>共鸣与回应</h3><p>在对方画上添笔，送上一首歌</p></div>
+        
         <div class="canvas-box"><canvas id="replyCanvas"></canvas></div>
-        <div class="tools">
-            <div class="color-dot active" style="background:#003366" onclick="setPen('#003366', this)"></div>
-            <div class="color-dot" style="background:#f59e0b" onclick="setPen('#f59e0b', this)"></div>
-            <div style="flex: 1"></div>
+        
+        <div class="tool-panel">
+            <div class="tool-row">
+                <div class="colors" id="palette-reply">
+                    <div class="color-dot active" style="background:#003366" onclick="setTool('replyCanvas', 'color', '#003366', this)"></div>
+                    <div class="color-dot" style="background:#ef4444" onclick="setTool('replyCanvas', 'color', '#ef4444', this)"></div>
+                    <div class="color-dot" style="background:#f59e0b" onclick="setTool('replyCanvas', 'color', '#f59e0b', this)"></div>
+                    <div class="color-dot" style="background:#10b981" onclick="setTool('replyCanvas', 'color', '#10b981', this)"></div>
+                    <div class="color-dot" style="background:#ffffff; border-color:#cbd5e1;" onclick="setTool('replyCanvas', 'color', '#ffffff', this)"></div>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="sizes" id="size-reply">
+                    <span class="size-btn" onclick="setTool('replyCanvas', 'width', 2, this)">细</span>
+                    <span class="size-btn active" onclick="setTool('replyCanvas', 'width', 5, this)">中</span>
+                    <span class="size-btn" onclick="setTool('replyCanvas', 'width', 12, this)">粗</span>
+                </div>
+                <button class="action-btn" onclick="undo('replyCanvas')">↩ 撤销</button>
+            </div>
         </div>
-        <input type="text" id="rSong" placeholder="推荐正向歌曲（如：《生如夏花》《逆光》）">
+
+        <input type="text" id="rSong" placeholder="送Ta一首正向歌曲（如：《逆光》）">
         <button class="btn" onclick="sendReply()">完成治愈并寄回</button>
+        <button class="btn btn-outline" style="border:none; color:#94a3b8;" onclick="showView('view-home')">放弃打捞，返回主页</button>
     </div>
 
     <!-- 查看回信 -->
@@ -140,11 +193,11 @@
         <input type="password" id="cPwd" placeholder="输入密码">
         <button class="btn" onclick="checkMine()">查询我的瓶子</button>
         
-        <div id="res-area" style="display:none; margin-top:20px;">
-            <p id="res-status" style="font-size:14px; margin-bottom:10px; color:var(--navy-blue); font-weight:600;"></p>
-            <img id="res-img" style="width:100%; border-radius:8px; border:1px solid var(--border-color);">
-            <div style="background:#f1f5f9; padding:15px; border-radius:8px; margin-top:10px;">
-                <p id="res-song" style="font-size:14px; margin:0;"></p>
+        <div id="res-area" style="display:none; margin-top:20px; text-align:center;">
+            <p id="res-status" style="font-size:15px; margin-bottom:10px; color:var(--navy-blue); font-weight:bold;"></p>
+            <img id="res-img" style="width:100%; border-radius:8px; border:1.5px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <div style="background:#f1f5f9; padding:15px; border-radius:8px; margin-top:15px;">
+                <p id="res-song" style="font-size:15px; margin:0; color:var(--navy-blue);"></p>
             </div>
         </div>
         <button class="btn btn-outline" onclick="showView('view-home')" style="margin-top:20px;">返回主页</button>
@@ -152,73 +205,152 @@
 </div>
 
 <script>
-    // Bmob 初始化
     Bmob.initialize("4818d9c835a5c2e0a838da720129b480", "8ce1e6f614a8772d");
 
-    let currColor = '#003366';
     let activeBottleId = null;
+    
+    // 画布状态与撤销栈管理
+    const ctxStates = {};
+    const undoStacks = { 'drawCanvas': [], 'replyCanvas': [] };
 
-    // 视图切换
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if(id === 'view-draw') initCanvas('drawCanvas');
-        if(id === 'view-reply') initCanvas('replyCanvas');
+        
+        // 关键修复：延迟初始化，等待 DOM 渲染完成拿到准确宽度
+        setTimeout(() => {
+            if(id === 'view-draw') initCanvas('drawCanvas');
+            // view-reply 的画布初始化在 loadBottle 拿到图片后执行
+        }, 50);
     }
 
-    // 画布逻辑
-    function initCanvas(id) {
+    // 核心绘画引擎升级：兼容 PC 与手机的 Pointer Events
+    function initCanvas(id, bgImageSrc = null) {
+        const cvs = document.getElementById(id);
+        const ctx = cvs.getContext('2d', { willReadFrequently: true });
+        
+        if (!cvs.initialized) {
+            const rect = cvs.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            
+            cvs.width = rect.width * dpr;
+            cvs.height = 320 * dpr;
+            ctx.scale(dpr, dpr);
+            cvs.style.width = rect.width + 'px';
+            cvs.style.height = '320px';
+
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctxStates[id] = { color: '#003366', width: 5, drawing: false };
+
+            const getPos = (e) => {
+                const r = cvs.getBoundingClientRect();
+                return { x: e.clientX - r.left, y: e.clientY - r.top };
+            };
+
+            const start = (e) => { 
+                ctxStates[id].drawing = true; 
+                const p = getPos(e); 
+                ctx.beginPath(); ctx.moveTo(p.x, p.y); 
+                // 绘制一个点，让用户点击也能画出圆点
+                ctx.fillStyle = ctxStates[id].color;
+                ctx.arc(p.x, p.y, ctxStates[id].width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath(); ctx.moveTo(p.x, p.y); 
+            };
+            
+            const move = (e) => { 
+                if(!ctxStates[id].drawing) return; 
+                const p = getPos(e); 
+                ctx.strokeStyle = ctxStates[id].color; 
+                ctx.lineWidth = ctxStates[id].width;
+                ctx.lineTo(p.x, p.y); 
+                ctx.stroke(); 
+            };
+            
+            const stop = () => { 
+                if(ctxStates[id].drawing) {
+                    ctxStates[id].drawing = false; 
+                    saveState(id); // 抬笔时自动保存状态用于撤销
+                }
+            };
+
+            // 使用 pointer 事件完美统一鼠标和触摸屏
+            cvs.addEventListener('pointerdown', start);
+            cvs.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', stop);
+            
+            // 阻止触摸设备的默认滑动行为
+            cvs.addEventListener('touchstart', (e) => e.preventDefault(), {passive: false});
+            cvs.initialized = true;
+        }
+
+        // 如果传入了背景图（打捞回复模式）
+        if (bgImageSrc) {
+            const img = new Image();
+            img.onload = () => { 
+                ctx.clearRect(0, 0, cvs.width, cvs.height);
+                ctx.drawImage(img, 0, 0, cvs.offsetWidth, 320); 
+                undoStacks[id] = []; // 重置撤销栈
+                saveState(id); // 保存背景作为第0步
+            };
+            img.src = bgImageSrc;
+        } else if (undoStacks[id].length === 0) {
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+            saveState(id); // 空白画板的初始状态
+        }
+    }
+
+    // 设置画笔颜色和粗细
+    function setTool(canvasId, type, value, el) {
+        ctxStates[canvasId][type] = value;
+        const parent = el.parentElement;
+        parent.querySelectorAll(type === 'color' ? '.color-dot' : '.size-btn').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    // 撤销与清空机制
+    function saveState(id) {
         const cvs = document.getElementById(id);
         const ctx = cvs.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
-        const rect = cvs.parentElement.getBoundingClientRect();
-        
-        cvs.width = rect.width * dpr;
-        cvs.height = 340 * dpr;
-        ctx.scale(dpr, dpr);
-        cvs.style.width = rect.width + 'px';
-        cvs.style.height = '340px';
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 3;
-
-        let drawing = false;
-        const getPos = (e) => {
-            const r = cvs.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - r.left, y: clientY - r.top };
-        };
-
-        const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-        const move = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.strokeStyle = currColor; ctx.lineTo(p.x, p.y); ctx.stroke(); };
-        const stop = () => { drawing = false; };
-
-        cvs.onmousedown = start; cvs.onmousemove = move; window.onmouseup = stop;
-        cvs.ontouchstart = start; cvs.ontouchmove = move; cvs.ontouchend = stop;
+        undoStacks[id].push(ctx.getImageData(0, 0, cvs.width, cvs.height));
+        if(undoStacks[id].length > 11) undoStacks[id].shift(); // 最多存10步
     }
 
-    function setPen(color, el) {
-        currColor = color;
-        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-        el.classList.add('active');
+    function undo(id) {
+        if(undoStacks[id].length > 1) {
+            undoStacks[id].pop(); // 弹出当前状态
+            const cvs = document.getElementById(id);
+            cvs.getContext('2d').putImageData(undoStacks[id][undoStacks[id].length - 1], 0, 0);
+        } else if (undoStacks[id].length === 1 && id === 'drawCanvas') {
+            clearCanvas(id); // 画布撤销到极致就是清空
+        }
     }
 
     function clearCanvas(id) {
         const cvs = document.getElementById(id);
         cvs.getContext('2d').clearRect(0, 0, cvs.width, cvs.height);
+        undoStacks[id] = [];
+        saveState(id);
     }
 
-    // 业务逻辑：发送瓶子
-    async function sendBottle() {
+    // --- Bmob 交互逻辑 ---
+    function sendBottle() {
         const name = document.getElementById('sName').value.trim();
         const pwd = document.getElementById('sPwd').value.trim();
-        const img = document.getElementById('drawCanvas').toDataURL("image/png", 0.5);
+        // 给画布填充白色背景，防止部分手机透明背景变黑
+        const cvs = document.getElementById('drawCanvas');
+        const tempCtx = cvs.getContext('2d');
+        tempCtx.globalCompositeOperation = 'destination-over';
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, cvs.width, cvs.height);
+        
+        const img = cvs.toDataURL("image/png", 0.6);
+        tempCtx.globalCompositeOperation = 'source-over'; // 恢复
 
-        if(!name || !pwd) return alert("请填写代号和密码，以便后续找回回信哦！");
+        if(!name || !pwd) return alert("为了能找到回信，请务必填写代号和密码哦！");
 
-        setLoading(true);
+        setLoading(true, '正在封装你的心情...');
         const query = Bmob.Query('Bottle');
         query.set("senderName", name);
         query.set("password", pwd);
@@ -226,38 +358,34 @@
         query.set("status", 0);
         query.save().then(() => {
             setLoading(false);
-            alert("心情已封装进瓶子投向星海。");
+            alert("投掷成功！你的心情已经飘向星海。");
+            document.getElementById('sName').value = '';
+            document.getElementById('sPwd').value = '';
+            clearCanvas('drawCanvas');
             showView('view-home');
-        }).catch(e => { setLoading(false); alert("系统开小差了: " + e.message); });
+        }).catch(e => { setLoading(false); alert("投递失败: " + e.message); });
     }
 
-    // 业务逻辑：捞瓶子
     function loadBottle() {
-        setLoading(true);
+        setLoading(true, '大海正在寻找需要治愈的灵魂...');
         const query = Bmob.Query('Bottle');
         query.equalTo("status", "==", 0);
         query.find().then(res => {
             setLoading(false);
-            if(res.length === 0) return alert("大海目前很平静，还没有需要治愈的瓶子，晚点再来吧。");
+            if(res.length === 0) return alert("海面上静悄悄的，大家都还没投掷烦恼，晚点再来吧。");
             const target = res[Math.floor(Math.random() * res.length)];
             activeBottleId = target.objectId;
             showView('view-reply');
-            
-            const cvs = document.getElementById('replyCanvas');
-            const ctx = cvs.getContext('2d');
-            const img = new Image();
-            img.onload = () => { ctx.drawImage(img, 0, 0, cvs.offsetWidth, 340); };
-            img.src = target.originalImage;
-        });
+            initCanvas('replyCanvas', target.originalImage); // 传入原图作为底层
+        }).catch(e => { setLoading(false); alert("打捞失败: " + e.message); });
     }
 
-    // 业务逻辑：回复
-    async function sendReply() {
+    function sendReply() {
         const song = document.getElementById('rSong').value.trim();
-        const img = document.getElementById('replyCanvas').toDataURL("image/png", 0.5);
-        if(!song) return alert("送Ta一首歌吧，哪怕只是歌名。");
+        const img = document.getElementById('replyCanvas').toDataURL("image/jpeg", 0.6);
+        if(!song) return alert("音乐是灵魂的解药，请送Ta一首歌吧~");
 
-        setLoading(true);
+        setLoading(true, '正在传递你的温暖...');
         const query = Bmob.Query('Bottle');
         query.get(activeBottleId).then(obj => {
             obj.set("replyImage", img);
@@ -266,41 +394,43 @@
             return obj.save();
         }).then(() => {
             setLoading(false);
-            alert("温暖已送达！感谢你的善良。");
+            alert("温暖回音已送达！感谢你的善意。");
+            document.getElementById('rSong').value = '';
             showView('view-home');
-        });
+        }).catch(e => { setLoading(false); alert("发送失败: " + e.message); });
     }
 
-    // 业务逻辑：查看
     function checkMine() {
         const name = document.getElementById('cName').value.trim();
         const pwd = document.getElementById('cPwd').value.trim();
-        if(!name || !pwd) return;
+        if(!name || !pwd) return alert("请输入代号和密码");
 
-        setLoading(true);
+        setLoading(true, '正在翻找回响的信箱...');
         const query = Bmob.Query('Bottle');
         query.equalTo("senderName", "==", name);
         query.equalTo("password", "==", pwd);
         query.find().then(res => {
             setLoading(false);
-            const area = document.getElementById('res-area');
-            if(res.length === 0) return alert("未找到匹配的瓶子，请检查代号和密码。");
+            if(res.length === 0) return alert("未找到匹配的瓶子，是不是记错代号或密码啦？");
             
-            const b = res[0];
-            area.style.display = 'block';
+            const b = res[res.length - 1]; // 拿最新投掷的一个
+            document.getElementById('res-area').style.display = 'block';
             if(b.status === 1) {
                 document.getElementById('res-status').innerText = "🎉 你的心情已被温柔回应：";
                 document.getElementById('res-img').src = b.replyImage;
-                document.getElementById('res-song').innerText = "🎵 对方赠送的歌曲：" + b.replySong;
+                document.getElementById('res-song').innerHTML = "🎵 赠你的歌：<b>" + b.replySong + "</b>";
             } else {
-                document.getElementById('res-status').innerText = "🌊 瓶子还在海上漂流，暂无回响。";
+                document.getElementById('res-status').innerText = "🌊 瓶子还在海上漂流，暂无回响...";
                 document.getElementById('res-img').src = b.originalImage;
-                document.getElementById('res-song').innerText = "提示：可以等其他同学参与后再来查看。";
+                document.getElementById('res-song').innerHTML = "提示：晚些时候再来看看吧。";
             }
-        });
+        }).catch(e => { setLoading(false); alert("查询失败: " + e.message); });
     }
 
-    function setLoading(s) { document.getElementById('loading-mask').style.display = s ? 'flex' : 'none'; }
+    function setLoading(s, text='') { 
+        document.getElementById('loading-mask').style.display = s ? 'flex' : 'none'; 
+        document.getElementById('loading-text').innerText = text;
+    }
 </script>
 </body>
 </html>
