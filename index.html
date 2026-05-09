@@ -1,331 +1,882 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>音为画解 · 心灵漂流 v2.0</title>
-    <!-- 引入 Bmob SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/bmob-js-sdk@2.2.5/dist/Bmob-2.2.5.min.js"></script>
-    <style>
-        :root { --navy-blue: #003366; --bg: #f8fafc; }
-        body, html { margin: 0; padding: 0; background: var(--bg); font-family: sans-serif; overflow: hidden; touch-action: none; }
-        .app { max-width: 450px; margin: 0 auto; height: 100vh; background: white; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        
-        .view { display: none; flex-direction: column; padding: 20px; flex: 1; overflow-y: auto; }
-        .view.active { display: flex; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>音为画解 · 心灵漂流</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .btn { background: var(--navy-blue); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; margin-top: 10px; cursor: pointer; }
-        .btn-outline { background: white; color: var(--navy-blue); border: 1px solid var(--navy-blue); }
-        input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; font-size: 14px; }
+:root {
+  --navy: #003366;
+  --navy-light: #004d99;
+  --navy-dark: #002244;
+  --white: #ffffff;
+  --gray-50: #f8f9fa;
+  --gray-100: #f0f2f5;
+  --gray-200: #e2e6ea;
+  --gray-300: #cdd3da;
+  --gray-400: #adb5bd;
+  --gray-600: #6c757d;
+  --accent: #5b9bd5;
+  --accent-soft: #d6e8f7;
+  --success: #3a9e6e;
+  --warm: #e8a87c;
+  --radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-        /* 画板专属样式 */
-        .canvas-container { border: 2px solid #e2e8f0; background: white; border-radius: 8px; margin-bottom: 15px; width: 100%; height: 350px; overflow: hidden; position: relative; }
-        canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--gray-50);
+  color: #333;
+  -webkit-overflow-scrolling: touch;
+}
 
-        /* 工具栏 */
-        .toolbar { display: flex; gap: 10px; margin-bottom: 15px; background: #f1f5f9; padding: 10px; border-radius: 8px; align-items: center; justify-content: space-between; }
-        .colors, .sizes { display: flex; gap: 8px; align-items: center; }
-        .color-dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.3); cursor: pointer; }
-        .color-dot.active { border: 2px solid black; transform: scale(1.1); }
-        .size-btn { padding: 5px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; cursor: pointer; }
-        .size-btn.active { background: var(--navy-blue); color: white; border-color: var(--navy-blue); }
-    </style>
+/* ===== Loading Overlay ===== */
+#loading-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(6px);
+  display: none; /* hidden by default */
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+#loading-overlay.active { display: flex; }
+.loading-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text {
+  font-size: 14px; color: var(--gray-600);
+  letter-spacing: 0.5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Toast ===== */
+#toast {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(0,20,50,0.88);
+  color: #fff; padding: 14px 28px;
+  border-radius: 10px; font-size: 14px;
+  z-index: 10000; pointer-events: none;
+  opacity: 0; transition: all 0.3s ease;
+  text-align: center; max-width: 80vw;
+}
+#toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* ===== App Container ===== */
+#app {
+  width: 100%; height: 100%;
+  overflow: hidden; position: relative;
+}
+
+/* ===== Views ===== */
+.view {
+  display: none;
+  flex-direction: column;
+  width: 100%; height: 100%;
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.view.active { display: flex; opacity: 1; }
+
+/* ===== HOME VIEW ===== */
+#home-view {
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(175deg, var(--white) 0%, var(--accent-soft) 50%, var(--gray-100) 100%);
+  padding: 32px 24px;
+  text-align: center;
+}
+.home-deco {
+  font-size: 40px; margin-bottom: 8px;
+  animation: floatUp 3s ease-in-out infinite alternate;
+}
+@keyframes floatUp {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-8px); }
+}
+.home-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 28px; font-weight: 700;
+  color: var(--navy);
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+}
+.home-subtitle {
+  font-size: 13px; color: var(--gray-600);
+  margin-bottom: 8px; letter-spacing: 1px;
+}
+.home-school {
+  font-size: 12px; color: var(--accent);
+  margin-bottom: 36px;
+  background: var(--white);
+  padding: 4px 14px; border-radius: 20px;
+  border: 1px solid var(--accent-soft);
+}
+.home-buttons { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 300px; }
+.home-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px 24px;
+  border: none; border-radius: var(--radius);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 16px; font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.home-btn:active { transform: scale(0.97); }
+.btn-draw { background: var(--navy); color: var(--white); }
+.btn-draw:active { background: var(--navy-dark); }
+.btn-reply { background: var(--white); color: var(--navy); border: 1.5px solid var(--navy); }
+.btn-check { background: var(--white); color: var(--gray-600); border: 1.5px solid var(--gray-300); }
+
+/* ===== SHARED INNER VIEW STYLES ===== */
+.view-inner {
+  width: 100%; max-width: 440px;
+  margin: 0 auto;
+  padding: 16px 20px 32px;
+  flex: 1; display: flex; flex-direction: column;
+}
+.view-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 16px;
+}
+.back-btn {
+  width: 36px; height: 36px; border: none;
+  background: var(--gray-100); border-radius: 50%;
+  font-size: 18px; cursor: pointer; color: var(--navy);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.back-btn:active { background: var(--gray-200); }
+.view-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 18px; font-weight: 600;
+  color: var(--navy);
+}
+
+/* ===== Canvas Area ===== */
+.canvas-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  overflow: hidden;
+  touch-action: none;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 12px;
+}
+.canvas-wrapper canvas {
+  display: block;
+  width: 100%; height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+.canvas-hint {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--gray-300);
+  font-size: 13px;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.canvas-hint.hidden { opacity: 0; }
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+.toolbar-group {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--gray-100);
+  padding: 4px 6px; border-radius: 8px;
+}
+.color-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer; transition: all 0.2s;
+  position: relative;
+}
+.color-dot.active { border-color: var(--navy); transform: scale(1.15); }
+.color-dot::after {
+  content: ''; position: absolute;
+  inset: 3px; border-radius: 50%;
+}
+
+.size-btn {
+  width: 30px; height: 30px;
+  border: none; border-radius: 6px;
+  background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.size-btn.active { background: var(--navy); }
+.size-btn.active .size-dot { background: var(--white); }
+.size-dot {
+  border-radius: 50%; background: var(--gray-600);
+}
+
+.tool-btn {
+  height: 30px; padding: 0 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px; background: var(--white);
+  font-size: 12px; color: var(--gray-600);
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Noto Sans SC', sans-serif;
+}
+.tool-btn:active { background: var(--gray-100); }
+
+/* ===== Form Fields ===== */
+.field-group { margin-bottom: 12px; }
+.field-label {
+  display: block; font-size: 13px;
+  color: var(--gray-600); margin-bottom: 5px;
+  font-weight: 500;
+}
+.field-input {
+  width: 100%; height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--white);
+  color: #333;
+  transition: border-color var(--transition);
+  outline: none;
+}
+.field-input:focus { border-color: var(--accent); }
+
+.submit-btn {
+  width: 100%; height: 48px;
+  border: none; border-radius: var(--radius);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 16px; font-weight: 500;
+  font-family: 'Noto Sans SC', sans-serif;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+  margin-top: 8px;
+}
+.submit-btn:active { background: var(--navy-dark); transform: scale(0.98); }
+
+/* ===== Reply View specifics ===== */
+.reply-info {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--navy);
+  line-height: 1.6;
+}
+
+/* ===== Check View Result ===== */
+.result-card {
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.result-card img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border: 1px solid var(--gray-100);
+}
+.result-status {
+  font-size: 14px;
+  color: var(--gray-600);
+  margin-bottom: 8px;
+}
+.result-song {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 18px;
+  color: var(--navy);
+  font-weight: 600;
+  margin-top: 4px;
+}
+.result-emoji { font-size: 36px; margin-bottom: 10px; }
+.status-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  margin-bottom: 12px;
+}
+.status-replied { background: #e6f4ed; color: var(--success); }
+.status-drifting { background: #fef3e2; color: #c07b30; }
+
+/* ===== Scrollbar ===== */
+.view::-webkit-scrollbar { width: 3px; }
+.view::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 2px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 380px) {
+  .home-title { font-size: 24px; }
+  .toolbar-group { gap: 3px; padding: 3px 4px; }
+  .color-dot { width: 22px; height: 22px; }
+}
+</style>
 </head>
 <body>
 
-<div class="app">
-    <!-- 主页 -->
-    <div id="view-home" class="view active">
-        <h2 style="text-align: center; color: var(--navy-blue); margin-top: 50px;">音为画解 · 心灵漂流 v2.0</h2>
-        <p style="text-align: center; color: #666; font-size: 14px;">修复版测试</p>
-        <button class="btn" onclick="switchView('view-draw')">画下心情</button>
-        <button class="btn btn-outline" onclick="loadBottle()">打捞漂流瓶</button>
-        <button class="btn btn-outline" style="border-color: #ccc; color: #999;" onclick="switchView('view-check')">查看回信</button>
-    </div>
-
-    <!-- 画画页 -->
-    <div id="view-draw" class="view">
-        <h3 style="color: var(--navy-blue); margin-top: 0;">开始你的创作</h3>
-        <div class="canvas-container" id="box-draw">
-            <canvas id="drawCanvas"></canvas>
-        </div>
-        
-        <!-- 简单直接的工具栏 -->
-        <div class="toolbar">
-            <div class="colors" id="colors-draw">
-                <div class="color-dot active" style="background: #003366;" onclick="changePen('drawCanvas', 'color', '#003366', this)"></div>
-                <div class="color-dot" style="background: #e53e3e;" onclick="changePen('drawCanvas', 'color', '#e53e3e', this)"></div>
-                <div class="color-dot" style="background: #3182ce;" onclick="changePen('drawCanvas', 'color', '#3182ce', this)"></div>
-                <div class="color-dot" style="background: #38a169;" onclick="changePen('drawCanvas', 'color', '#38a169', this)"></div>
-                <div class="color-dot" style="background: #ffffff; border-color: #ccc;" onclick="changePen('drawCanvas', 'color', '#ffffff', this)" title="橡皮擦"></div>
-            </div>
-            <div class="sizes" id="sizes-draw">
-                <button class="size-btn" onclick="changePen('drawCanvas', 'width', 2, this)">细</button>
-                <button class="size-btn active" onclick="changePen('drawCanvas', 'width', 6, this)">中</button>
-                <button class="size-btn" onclick="changePen('drawCanvas', 'width', 15, this)">粗</button>
-            </div>
-            <button class="size-btn" style="color: red; border-color: red;" onclick="clearCanvas('drawCanvas')">清空</button>
-        </div>
-
-        <input type="text" id="sName" placeholder="匿名代号（如：成都大熊猫）">
-        <input type="password" id="sPwd" placeholder="设置提取密码">
-        <button class="btn" onclick="sendBottle()">投向大海</button>
-        <button class="btn btn-outline" onclick="switchView('view-home')">返回</button>
-    </div>
-
-    <!-- 打捞回复页 -->
-    <div id="view-reply" class="view">
-        <h3 style="color: var(--navy-blue); margin-top: 0;">回应这份心情</h3>
-        <div class="canvas-container" id="box-reply">
-            <canvas id="replyCanvas"></canvas>
-        </div>
-        <div class="toolbar">
-            <div class="colors" id="colors-reply">
-                <div class="color-dot active" style="background: #003366;" onclick="changePen('replyCanvas', 'color', '#003366', this)"></div>
-                <div class="color-dot" style="background: #d69e2e;" onclick="changePen('replyCanvas', 'color', '#d69e2e', this)"></div>
-                <div class="color-dot" style="background: #ffffff; border-color: #ccc;" onclick="changePen('replyCanvas', 'color', '#ffffff', this)"></div>
-            </div>
-            <div class="sizes" id="sizes-reply">
-                <button class="size-btn active" onclick="changePen('replyCanvas', 'width', 6, this)">中笔</button>
-                <button class="size-btn" style="color: red; border-color: red;" onclick="resetReply()">还原</button>
-            </div>
-        </div>
-        <input type="text" id="rSong" placeholder="送Ta一首歌（如：《逆光》）">
-        <button class="btn" onclick="sendReply()">回复并送回</button>
-        <button class="btn btn-outline" onclick="switchView('view-home')">返回</button>
-    </div>
-
-    <!-- 查看回信页 -->
-    <div id="view-check" class="view">
-        <h3 style="color: var(--navy-blue); margin-top: 0;">我的回响</h3>
-        <input type="text" id="cName" placeholder="你的代号">
-        <input type="password" id="cPwd" placeholder="你的密码">
-        <button class="btn" onclick="checkMine()">查询</button>
-        
-        <div id="res-area" style="display: none; margin-top: 20px;">
-            <p id="res-status" style="color: #003366; font-weight: bold;"></p>
-            <img id="res-img" style="width: 100%; border: 1px solid #ccc; border-radius: 8px;">
-            <p id="res-song" style="background: #f1f5f9; padding: 10px; border-radius: 4px; margin-top: 10px;"></p>
-        </div>
-        <button class="btn btn-outline" onclick="switchView('view-home')">返回</button>
-    </div>
+<!-- Loading Overlay -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">加载中…</div>
 </div>
 
+<!-- Toast -->
+<div id="toast"></div>
+
+<div id="app">
+  <!-- ====== HOME VIEW ====== -->
+  <div id="home-view" class="view active">
+    <div class="home-deco">🌊</div>
+    <h1 class="home-title">音为画解 · 心灵漂流</h1>
+    <p class="home-subtitle">画出心情，漂向远方，收获回响</p>
+    <span class="home-school">SWUFE · 西南财经大学班级心理互动</span>
+    <div class="home-buttons">
+      <button class="home-btn btn-draw" onclick="switchView('draw')">🎨 画下心情</button>
+      <button class="home-btn btn-reply" onclick="switchView('reply')">🫧 打捞漂流瓶</button>
+      <button class="home-btn btn-check" onclick="switchView('check')">📬 查看回信</button>
+    </div>
+  </div>
+
+  <!-- ====== DRAW VIEW ====== -->
+  <div id="draw-view" class="view">
+    <div class="view-inner">
+      <div class="view-header">
+        <button class="back-btn" onclick="switchView('home')">←</button>
+        <span class="view-title">🎨 画下此刻的心情</span>
+      </div>
+      <div class="canvas-wrapper" id="draw-canvas-wrapper">
+        <canvas id="draw-canvas"></canvas>
+        <div class="canvas-hint" id="draw-hint">在这里自由涂画吧 ✨</div>
+      </div>
+      <div class="toolbar" id="draw-toolbar"></div>
+      <div class="field-group">
+        <label class="field-label">你的匿名代号</label>
+        <input class="field-input" id="draw-name" type="text" placeholder="例：深海水母" maxlength="20">
+      </div>
+      <div class="field-group">
+        <label class="field-label">设置提取密码</label>
+        <input class="field-input" id="draw-password" type="password" placeholder="至少4位，用于查看回信" maxlength="20">
+      </div>
+      <button class="submit-btn" onclick="submitBottle()">🌊 投入漂流瓶</button>
+    </div>
+  </div>
+
+  <!-- ====== REPLY VIEW ====== -->
+  <div id="reply-view" class="view">
+    <div class="view-inner">
+      <div class="view-header">
+        <button class="back-btn" onclick="switchView('home')">←</button>
+        <span class="view-title">🫧 打捞一只漂流瓶</span>
+      </div>
+      <div class="reply-info" id="reply-info">正在从海中打捞漂流瓶…</div>
+      <div class="canvas-wrapper" id="reply-canvas-wrapper">
+        <canvas id="reply-canvas"></canvas>
+        <div class="canvas-hint" id="reply-hint">在 TA 的画上留下你的痕迹 🖊️</div>
+      </div>
+      <div class="toolbar" id="reply-toolbar"></div>
+      <div class="field-group">
+        <label class="field-label">🎵 送 TA 一首正能量的歌</label>
+        <input class="field-input" id="reply-song" type="text" placeholder="例：稻香 - 周杰伦" maxlength="50">
+      </div>
+      <button class="submit-btn" onclick="submitReply()">💌 回应这只漂流瓶</button>
+    </div>
+  </div>
+
+  <!-- ====== CHECK VIEW ====== -->
+  <div id="check-view" class="view">
+    <div class="view-inner">
+      <div class="view-header">
+        <button class="back-btn" onclick="switchView('home')">←</button>
+        <span class="view-title">📬 查看我的回信</span>
+      </div>
+      <div id="check-form">
+        <div class="field-group">
+          <label class="field-label">你的匿名代号</label>
+          <input class="field-input" id="check-name" type="text" placeholder="投瓶时的代号" maxlength="20">
+        </div>
+        <div class="field-group">
+          <label class="field-label">提取密码</label>
+          <input class="field-input" id="check-password" type="password" placeholder="投瓶时设置的密码" maxlength="20">
+        </div>
+        <button class="submit-btn" onclick="checkBottle()">🔍 查看回响</button>
+      </div>
+      <div id="check-result" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bmob SDK -->
+<script src="https://lib.bmob.cn/bmob-js-sdk/bmob-js-sdk-2.2.5.min.js"></script>
 <script>
-    // Bmob 初始化
-    Bmob.initialize("4818d9c835a5c2e0a838da720129b480", "8ce1e6f614a8772d");
+// ============================================================
+//  INIT BMOB
+// ============================================================
+Bmob.initialize('4818d9c835a5c2e0a838da720129b480', '8ce1e6f614a8772d');
 
-    // 全局画笔状态和缓存
-    const penState = {
-        'drawCanvas': { color: '#003366', width: 6 },
-        'replyCanvas': { color: '#003366', width: 6 }
+// ============================================================
+//  GLOBALS
+// ============================================================
+const COLORS = [
+  { name: '黑', hex: '#222222' },
+  { name: '海蓝', hex: '#003366' },
+  { name: '天蓝', hex: '#5b9bd5' },
+  { name: '珊瑚', hex: '#e8706a' },
+  { name: '暖橙', hex: '#e8a87c' },
+  { name: '森绿', hex: '#3a9e6e' },
+  { name: '橡皮擦', hex: '#ffffff' },
+];
+const SIZES = [
+  { label: '细', value: 2, dotSize: 4 },
+  { label: '中', value: 5, dotSize: 7 },
+  { label: '粗', value: 10, dotSize: 11 },
+];
+
+// Canvas state objects
+const drawState = { canvas: null, ctx: null, color: '#222222', size: 5, drawing: false, hasDrawn: false };
+const replyState = { canvas: null, ctx: null, color: '#222222', size: 5, drawing: false, hasDrawn: false, baseImage: null, bottleId: null };
+
+// ============================================================
+//  UTILITY: Toast / Loading
+// ============================================================
+function showToast(msg, duration = 2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+function showLoading(text = '加载中…') {
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading-overlay').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('active');
+}
+
+// ============================================================
+//  VIEW SWITCHING
+// ============================================================
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.remove('active');
+  });
+  const target = document.getElementById(name + '-view');
+  // Force reflow before adding active so transition triggers
+  void target.offsetWidth;
+  target.classList.add('active');
+
+  // Post-switch initialization
+  if (name === 'draw') {
+    requestAnimationFrame(() => { setTimeout(() => initDrawCanvas(), 50); });
+  } else if (name === 'reply') {
+    requestAnimationFrame(() => { setTimeout(() => fetchAndInitReply(), 50); });
+  } else if (name === 'check') {
+    document.getElementById('check-form').style.display = '';
+    document.getElementById('check-result').style.display = 'none';
+  }
+}
+
+// ============================================================
+//  TOOLBAR BUILDER
+// ============================================================
+function buildToolbar(containerId, state, onClear) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  // Color group
+  const colorGroup = document.createElement('div');
+  colorGroup.className = 'toolbar-group';
+  COLORS.forEach((c, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot' + (state.color === c.hex ? ' active' : '');
+    dot.style.cssText = c.hex === '#ffffff'
+      ? 'background: #fff; border: 2px solid #ccc;'
+      : `background: ${c.hex};`;
+    if (state.color === c.hex) dot.style.borderColor = 'var(--navy)';
+    dot.title = c.name;
+    dot.addEventListener('click', () => {
+      state.color = c.hex;
+      buildToolbar(containerId, state, onClear);
+    });
+    colorGroup.appendChild(dot);
+  });
+  container.appendChild(colorGroup);
+
+  // Size group
+  const sizeGroup = document.createElement('div');
+  sizeGroup.className = 'toolbar-group';
+  SIZES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'size-btn' + (state.size === s.value ? ' active' : '');
+    const dot = document.createElement('div');
+    dot.className = 'size-dot';
+    dot.style.width = s.dotSize + 'px';
+    dot.style.height = s.dotSize + 'px';
+    btn.appendChild(dot);
+    btn.addEventListener('click', () => {
+      state.size = s.value;
+      buildToolbar(containerId, state, onClear);
+    });
+    sizeGroup.appendChild(btn);
+  });
+  container.appendChild(sizeGroup);
+
+  // Clear button
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'tool-btn';
+  clearBtn.textContent = '🗑 清空';
+  clearBtn.addEventListener('click', onClear);
+  container.appendChild(clearBtn);
+}
+
+// ============================================================
+//  CANVAS BINDNG (PointerEvents)
+// ============================================================
+function bindCanvasEvents(canvas, state, hintEl) {
+  // Prevent default touch scrolling at the wrapper level
+  const wrapper = canvas.parentElement;
+  wrapper.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
     };
-    let activeBottleId = null;
-    let bgImageCache = null; // 用于回复页的“还原”功能
+  }
 
-    // 页面切换逻辑（包含致命Bug的修复：强制延迟获取画布大小）
-    function switchView(id) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        
-        if (id === 'view-draw') {
-            // 延迟100毫秒，等浏览器把页面显示出来后，再初始化画布
-            setTimeout(() => initCanvas('drawCanvas'), 100);
-        }
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    state.drawing = true;
+    state.hasDrawn = true;
+    if (hintEl) hintEl.classList.add('hidden');
+    const p = getPos(e);
+    state.ctx.beginPath();
+    state.ctx.moveTo(p.x, p.y);
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    if (!state.drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    state.ctx.strokeStyle = state.color;
+    state.ctx.lineWidth = state.size;
+    state.ctx.lineCap = 'round';
+    state.ctx.lineJoin = 'round';
+    state.ctx.lineTo(p.x, p.y);
+    state.ctx.stroke();
+    state.ctx.beginPath();
+    state.ctx.moveTo(p.x, p.y);
+  });
+
+  const endDraw = () => { state.drawing = false; };
+  canvas.addEventListener('pointerup', endDraw);
+  canvas.addEventListener('pointercancel', endDraw);
+  canvas.addEventListener('pointerleave', endDraw);
+}
+
+// ============================================================
+//  DRAW VIEW CANVAS
+// ============================================================
+function initDrawCanvas() {
+  const wrapper = document.getElementById('draw-canvas-wrapper');
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  if (w === 0 || h === 0) { setTimeout(initDrawCanvas, 80); return; }
+
+  const canvas = document.getElementById('draw-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Fill white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawState.canvas = canvas;
+  drawState.ctx = ctx;
+  drawState.hasDrawn = false;
+  document.getElementById('draw-hint').classList.remove('hidden');
+
+  buildToolbar('draw-toolbar', drawState, () => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawState.hasDrawn = false;
+    document.getElementById('draw-hint').classList.remove('hidden');
+  });
+  bindCanvasEvents(canvas, drawState, document.getElementById('draw-hint'));
+}
+
+// ============================================================
+//  REPLY VIEW: Fetch Bottle & Init Canvas
+// ============================================================
+async function fetchAndInitReply() {
+  const wrapper = document.getElementById('reply-canvas-wrapper');
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  if (w === 0 || h === 0) { setTimeout(fetchAndInitReply, 80); return; }
+
+  showLoading('正在打捞漂流瓶…');
+  document.getElementById('reply-info').textContent = '正在从海中打捞漂流瓶…';
+
+  try {
+    const query = Bmob.Query('Bottle');
+    query.equalTo('status', '==', 0);
+    const results = await query.find();
+
+    if (!results || results.length === 0) {
+      hideLoading();
+      document.getElementById('reply-info').textContent = '🌊 海面平静，暂时没有漂流瓶可打捞。先去画一幅投入海中吧！';
+      return;
     }
 
-    // 核心绘画引擎（重写版：支持鼠标和所有手机触摸屏）
-    function initCanvas(id, bgImageSrc = null) {
-        const canvas = document.getElementById(id);
-        const container = canvas.parentElement;
-        const ctx = canvas.getContext('2d');
+    const bottle = results[Math.floor(Math.random() * results.length)];
+    replyState.bottleId = bottle.objectId;
+    replyState.baseImage = bottle.image;
 
-        // 强行把画布的物理像素设置得和外部容器一样大
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
+    document.getElementById('reply-info').textContent =
+      `🎉 成功打捞到一只漂流瓶！来自「${bottle.name || '匿名'}」的画作。请在 TA 的画上叠涂你的回应，并送 TA 一首歌。`;
 
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+    initReplyCanvas(bottle.image);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('reply-info').textContent = '打捞失败，请返回重试。';
+    showToast('网络异常，请重试');
+  }
+  hideLoading();
+}
 
-        let isDrawing = false;
+function initReplyCanvas(base64Img) {
+  const wrapper = document.getElementById('reply-canvas-wrapper');
+  const canvas = document.getElementById('reply-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
 
-        function getXY(e) {
-            const rect = canvas.getBoundingClientRect();
-            // 兼容鼠标和触摸屏
-            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        }
+  replyState.canvas = canvas;
+  replyState.ctx = ctx;
+  replyState.hasDrawn = false;
 
-        function startDrawing(e) {
-            e.preventDefault(); // 阻止手机屏幕滚动
-            isDrawing = true;
-            const pos = getXY(e);
-            
-            ctx.strokeStyle = penState[id].color;
-            ctx.lineWidth = penState[id].width;
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-            
-            // 点一下也能画出一个圆点
-            ctx.fillStyle = penState[id].color;
-            ctx.arc(pos.x, pos.y, penState[id].width / 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-        }
+  // Draw base image
+  const img = new Image();
+  img.onload = () => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, w, h);
+    document.getElementById('reply-hint').classList.remove('hidden');
+  };
+  img.onerror = () => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    showToast('原图加载失败');
+  };
+  img.src = base64Img;
 
-        function draw(e) {
-            if (!isDrawing) return;
-            e.preventDefault(); // 阻止手机屏幕滚动
-            const pos = getXY(e);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-        }
+  buildToolbar('reply-toolbar', replyState, () => {
+    // Clear only user strokes: redraw base image
+    const rImg = new Image();
+    rImg.onload = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(rImg, 0, 0, w, h);
+    };
+    rImg.src = base64Img;
+    replyState.hasDrawn = false;
+    document.getElementById('reply-hint').classList.remove('hidden');
+  });
+  bindCanvasEvents(canvas, replyState, document.getElementById('reply-hint'));
+}
 
-        function stopDrawing() { isDrawing = false; }
+// ============================================================
+//  CANVAS → BASE64 with white background
+// ============================================================
+function canvasToBase64(canvas) {
+  // Composite onto white background (handles transparency on all devices)
+  const tmp = document.createElement('canvas');
+  tmp.width = canvas.width;
+  tmp.height = canvas.height;
+  const tCtx = tmp.getContext('2d');
+  tCtx.fillStyle = '#ffffff';
+  tCtx.fillRect(0, 0, tmp.width, tmp.height);
+  tCtx.drawImage(canvas, 0, 0);
+  return tmp.toDataURL('image/jpeg', 0.75);
+}
 
-        // 清除旧的事件监听器，防止重复绑定
-        canvas.onmousedown = startDrawing;
-        canvas.onmousemove = draw;
-        canvas.onmouseup = stopDrawing;
-        canvas.onmouseout = stopDrawing;
+// ============================================================
+//  SUBMIT BOTTLE (Draw View)
+// ============================================================
+async function submitBottle() {
+  const name = document.getElementById('draw-name').value.trim();
+  const pwd = document.getElementById('draw-password').value.trim();
+  if (!name) { showToast('请输入匿名代号'); return; }
+  if (pwd.length < 4) { showToast('密码至少4位哦'); return; }
+  if (!drawState.hasDrawn) { showToast('先画点什么再投瓶吧 🎨'); return; }
 
-        canvas.ontouchstart = startDrawing;
-        canvas.ontouchmove = draw;
-        canvas.ontouchend = stopDrawing;
-        canvas.ontouchcancel = stopDrawing;
+  showLoading('正在将画作投入海中…');
+  try {
+    const base64 = canvasToBase64(drawState.canvas);
+    const query = Bmob.Query('Bottle');
+    query.set('name', name);
+    query.set('password', pwd);
+    query.set('image', base64);
+    query.set('status', 0);
+    await query.save();
+    hideLoading();
+    showToast('🌊 漂流瓶已投入大海！', 2500);
+    // Reset
+    document.getElementById('draw-name').value = '';
+    document.getElementById('draw-password').value = '';
+    setTimeout(() => switchView('home'), 1200);
+  } catch (err) {
+    console.error(err);
+    hideLoading();
+    showToast('提交失败，请重试');
+  }
+}
 
-        // 处理背景图
-        if (bgImageSrc) {
-            const img = new Image();
-            img.onload = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = bgImageSrc;
-        } else {
-            // 给画布铺一层白色底，防止保存图片时变成黑色透明背景
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+// ============================================================
+//  SUBMIT REPLY (Reply View)
+// ============================================================
+async function submitReply() {
+  const song = document.getElementById('reply-song').value.trim();
+  if (!song) { showToast('请送 TA 一首歌吧 🎵'); return; }
+  if (!replyState.bottleId) { showToast('没有打捞到漂流瓶'); return; }
+
+  showLoading('正在封装回信…');
+  try {
+    const base64 = canvasToBase64(replyState.canvas);
+    const query = Bmob.Query('Bottle');
+    query.set('id', replyState.bottleId);
+    query.set('replyImage', base64);
+    query.set('song', song);
+    query.set('status', 1);
+    await query.save();
+    hideLoading();
+    showToast('💌 回信已送达！', 2500);
+    document.getElementById('reply-song').value = '';
+    setTimeout(() => switchView('home'), 1200);
+  } catch (err) {
+    console.error(err);
+    hideLoading();
+    showToast('提交失败，请重试');
+  }
+}
+
+// ============================================================
+//  CHECK BOTTLE (Check View)
+// ============================================================
+async function checkBottle() {
+  const name = document.getElementById('check-name').value.trim();
+  const pwd = document.getElementById('check-password').value.trim();
+  if (!name || !pwd) { showToast('请输入代号和密码'); return; }
+
+  showLoading('正在查询…');
+  try {
+    const query = Bmob.Query('Bottle');
+    query.equalTo('name', '==', name);
+    query.equalTo('password', '==', pwd);
+    const results = await query.find();
+
+    if (!results || results.length === 0) {
+      hideLoading();
+      showToast('未找到对应漂流瓶，请检查代号和密码');
+      return;
     }
 
-    // 改变画笔粗细和颜色
-    function changePen(canvasId, type, value, btnElement) {
-        penState[canvasId][type] = value;
-        // 视觉反馈：高亮当前选中的按钮
-        const siblings = btnElement.parentElement.children;
-        for (let i = 0; i < siblings.length; i++) {
-            siblings[i].classList.remove('active');
-        }
-        btnElement.classList.add('active');
+    const bottle = results[0];
+    const resultDiv = document.getElementById('check-result');
+    document.getElementById('check-form').style.display = 'none';
+    resultDiv.style.display = '';
+
+    if (bottle.status === 1) {
+      resultDiv.innerHTML = `
+        <div class="result-card">
+          <div class="result-emoji">💌</div>
+          <span class="status-badge status-replied">已被回应</span>
+          <img src="${bottle.replyImage || bottle.image}" alt="画作">
+          <p class="result-status">有人在你的画上留下了痕迹，并送你一首歌：</p>
+          <p class="result-song">🎵 ${escHtml(bottle.song || '—')}</p>
+        </div>
+        <button class="submit-btn" style="margin-top:16px" onclick="switchView('home')">🏠 返回首页</button>`;
+    } else {
+      resultDiv.innerHTML = `
+        <div class="result-card">
+          <div class="result-emoji">🌊</div>
+          <span class="status-badge status-drifting">还在漂流中</span>
+          <img src="${bottle.image}" alt="画作">
+          <p class="result-status">你的漂流瓶还在大海上漂荡，耐心等待有缘人的回应吧~</p>
+        </div>
+        <button class="submit-btn" style="margin-top:16px" onclick="switchView('home')">🏠 返回首页</button>`;
     }
+  } catch (err) {
+    console.error(err);
+    showToast('查询失败，请重试');
+  }
+  hideLoading();
+}
 
-    // 清空主画布
-    function clearCanvas(id) {
-        const canvas = document.getElementById(id);
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
-    // 回复页的“还原”功能（撤销掉自己画的，恢复成别人的原图）
-    function resetReply() {
-        if (bgImageCache) initCanvas('replyCanvas', bgImageCache);
-    }
+// ============================================================
+//  GLOBAL: Prevent pull-to-refresh on mobile
+// ============================================================
+document.addEventListener('touchmove', function(e) {
+  if (e.target.closest('.canvas-wrapper')) {
+    e.preventDefault();
+  }
+}, { passive: false });
 
-    // ================= Bmob 数据库对接 =================
-
-    // 1. 投掷
-    function sendBottle() {
-        const name = document.getElementById('sName').value.trim();
-        const pwd = document.getElementById('sPwd').value.trim();
-        const img = document.getElementById('drawCanvas').toDataURL("image/jpeg", 0.7);
-
-        if (!name || !pwd) return alert("请填写代号和密码！");
-
-        const query = Bmob.Query('Bottle');
-        query.set("senderName", name);
-        query.set("password", pwd);
-        query.set("originalImage", img);
-        query.set("status", 0);
-        
-        document.querySelector('#view-draw .btn').innerText = "发送中...";
-        query.save().then(() => {
-            alert("成功抛出漂流瓶！");
-            document.querySelector('#view-draw .btn').innerText = "投向大海";
-            clearCanvas('drawCanvas');
-            switchView('view-home');
-        }).catch(e => { alert("网络错误: " + e.message); document.querySelector('#view-draw .btn').innerText = "投向大海"; });
-    }
-
-    // 2. 打捞
-    function loadBottle() {
-        document.querySelectorAll('.btn-outline')[0].innerText = "打捞中...";
-        const query = Bmob.Query('Bottle');
-        query.equalTo("status", "==", 0);
-        query.find().then(res => {
-            document.querySelectorAll('.btn-outline')[0].innerText = "打捞漂流瓶";
-            if (res.length === 0) return alert("大海里暂时没有等待回复的瓶子。");
-            
-            const target = res[Math.floor(Math.random() * res.length)];
-            activeBottleId = target.objectId;
-            bgImageCache = target.originalImage; // 缓存原图
-            
-            switchView('view-reply');
-            // 延迟初始化回复画布并铺上原图
-            setTimeout(() => initCanvas('replyCanvas', bgImageCache), 100);
-        });
-    }
-
-    // 3. 回复
-    function sendReply() {
-        const song = document.getElementById('rSong').value.trim();
-        const img = document.getElementById('replyCanvas').toDataURL("image/jpeg", 0.7);
-        if (!song) return alert("送一首歌吧！");
-
-        const query = Bmob.Query('Bottle');
-        document.querySelector('#view-reply .btn').innerText = "发送中...";
-        query.get(activeBottleId).then(obj => {
-            obj.set("replyImage", img);
-            obj.set("replySong", song);
-            obj.set("status", 1);
-            return obj.save();
-        }).then(() => {
-            alert("回复成功！");
-            document.querySelector('#view-reply .btn').innerText = "回复并送回";
-            switchView('view-home');
-        });
-    }
-
-    // 4. 查看
-    function checkMine() {
-        const name = document.getElementById('cName').value.trim();
-        const pwd = document.getElementById('cPwd').value.trim();
-        if (!name || !pwd) return;
-
-        document.querySelector('#view-check .btn').innerText = "查询中...";
-        const query = Bmob.Query('Bottle');
-        query.equalTo("senderName", "==", name);
-        query.equalTo("password", "==", pwd);
-        query.find().then(res => {
-            document.querySelector('#view-check .btn').innerText = "查询";
-            if (res.length === 0) return alert("没找到你的瓶子，检查下代号或密码？");
-            
-            const b = res[res.length - 1];
-            document.getElementById('res-area').style.display = 'block';
-            if (b.status === 1) {
-                document.getElementById('res-status').innerText = "🎉 你的心情被回应了：";
-                document.getElementById('res-img').src = b.replyImage;
-                document.getElementById('res-song').innerText = "🎵 对方送你的歌：" + b.replySong;
-            } else {
-                document.getElementById('res-status').innerText = "🌊 还在漂流中，暂未被捞起...";
-                document.getElementById('res-img').src = b.originalImage;
-                document.getElementById('res-song').innerText = "稍后再来看看吧。";
-            }
-        });
-    }
+// ============================================================
+//  INIT: Show home view on load
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  switchView('home');
+});
 </script>
 </body>
 </html>
